@@ -331,8 +331,10 @@ public class CodeBuilderCloud extends Cloud {
     List<NodeProvisioner.PlannedNode> list = new ArrayList<NodeProvisioner.PlannedNode>();
     String labelName = label == null ? getLabel() : label.getDisplayName();
     LOGGER.info("[CodeBuilder]: Excess workload sent by Jenkins: {} for label: {}", excessWorkload, labelName);
+
     // guard against non-matching labels
     if (label != null && !label.matches(Arrays.asList(new LabelAtom(getLabel())))) {
+      LOGGER.info("[CodeBuilder]: Non-matching label {} encountered for cloud with label {}", label, getLabel());
       return list;
     }
 
@@ -371,22 +373,23 @@ public class CodeBuilderCloud extends Cloud {
    * Jenkins host.
    */
   private long numStillProvisioning() {
-    return jenkins().getNodes().stream().filter(CodeBuilderAgent.class::isInstance).map(CodeBuilderAgent.class::cast)
-        .filter(a -> !a.getLauncher().isLaunchSupported()).count();
+    return jenkins().getNodes().stream()
+      // Get all `CodeBuilderAgent`s as `CodeBuilderAgent`s
+      .filter(CodeBuilderAgent.class::isInstance).map(CodeBuilderAgent.class::cast)
+      // Get all those that haven't succesfully launched yet (those for which 'launching' is 'supported')
+      .filter(a -> a.getLauncher().isLaunchSupported())
+      .count();
   }
 
   /** {@inheritDoc} */
   @Override
   public boolean canProvision(Label label) {
-    LOGGER.info("[CodeBuilder]: Check if can provision node for label '{}'", label);
-    boolean canProvision = label == null ? true : label.matches(Arrays.asList(new LabelAtom(getLabel())));
-    if (canProvision) {
-      LOGGER.info("[CodeBuilder]: Label '{}' matches current label '{}'. Node will be provisioned...", label, getLabel());
+    if (label == null) {
+      LOGGER.info("[CodeBuilder]: Allowing provision for null label");
+      return true;
     }
-    else {
-      LOGGER.info("[CodeBuilder]: Label '{}' DOESN'T MATCH current label '{}'. Node WON'T provisioned...", label, getLabel());
-    }
-    return canProvision;
+
+    return label.matches(Arrays.asList(new LabelAtom(getLabel())));
   }
 
   private static String getDefaultRegion() {
@@ -400,11 +403,11 @@ public class CodeBuilderCloud extends Cloud {
   public boolean isTerminateAgent() {
     return terminateAgent;
   }
-  
+
   public void setTerminateAgent(boolean terminateAgent) {
     this.terminateAgent = terminateAgent;
   }
-    
+
   @Extension
   public static class DescriptorImpl extends Descriptor<Cloud> {
     @Override
