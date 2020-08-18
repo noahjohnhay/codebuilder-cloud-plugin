@@ -13,6 +13,7 @@ import hudson.model.Computer;
 import hudson.model.Executor;
 import hudson.model.Queue;
 import hudson.slaves.AbstractCloudComputer;
+import hudson.slaves.OfflineCause;
 
 /**
  * CodeBuilderComputer class.
@@ -99,19 +100,15 @@ public class CodeBuilderComputer extends AbstractCloudComputer<CodeBuilderAgent>
     return String.format("name: %s buildID: %s", getName(), getBuildId());
   }
 
-  private void gracefulShutdown() {
+  protected void gracefulShutdown() {
     setAcceptingTasks(false);
 
-    Future<Object> next = Computer.threadPoolForRemoting.submit(() -> {
-      LOGGER.info("[CodeBuilder]: [{}]: Terminating agent after task.", this);
-      try {
-        Thread.sleep(500);
-        CodeBuilderCloud.jenkins().removeNode(getNode());
-      } catch (Exception e) {
-        LOGGER.info("[CodeBuilder]: [{}]: Termination error: {}", this, e.getClass());
-      }
-      return null;
-    });
-    next.notify();
+    LOGGER.info("[CodeBuilder]: [{}]: Terminating agent after task.", this);
+    try {
+      Thread.sleep(500);
+      disconnect(new OfflineCause.IdleOfflineCause());
+    } catch (Exception e) {
+      LOGGER.info("[CodeBuilder]: [{}]: Termination error: {}", this, e.getClass());
+    }
   }
 }
