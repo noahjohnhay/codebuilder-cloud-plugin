@@ -59,22 +59,7 @@ class CodeBuilderAgent extends AbstractCloudSlave {
   /** {@inheritDoc} */
   @Override
   protected void _terminate(TaskListener listener) throws IOException, InterruptedException {
-    listener.getLogger().println("[CodeBuilder]: Terminating agent: " + getDisplayName());
-
-    if (getLauncher() instanceof CodeBuilderLauncher) {
-      String buildId = ((CodeBuilderComputer) getComputer()).getBuildId();
-      if (StringUtils.isBlank(buildId)) {
-        return;
-      }
-
-      try {
-        LOGGER.info("[CodeBuilder]: Stopping build ID: {}", buildId);
-        cloud.getClient().stopBuild(new StopBuildRequest().withId(buildId));
-      } catch (ResourceNotFoundException e) {
-        // this is fine. really.
-      } catch (Exception e) {
-        LOGGER.error("[CodeBuilder]: Failed to stop build ID: {}", buildId, e);
-      }
-    }
+    LOGGER.info("[CodeBuilder]: Terminating agent: " + getDisplayName());
+    ((CodeBuilderComputer) getComputer()).gracefulShutdown();
   }
 }
