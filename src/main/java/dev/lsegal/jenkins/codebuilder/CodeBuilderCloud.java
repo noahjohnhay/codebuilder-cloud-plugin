@@ -346,12 +346,9 @@ public class CodeBuilderCloud extends Cloud {
       return list;
     }
 
-    long stillProvisioning = numStillProvisioning();
-    long numToLaunch = Math.max(excessWorkload - stillProvisioning, 0);
-    LOGGER.info("[CodeBuilder]: Provisioning {} nodes for label '{}' ({} already provisioning)", numToLaunch, labelName,
-        stillProvisioning);
+    LOGGER.info("[CodeBuilder]: Provisioning {} nodes for label '{}'", excessWorkload, labelName);
 
-    for (int i = 0; i < numToLaunch; i++) {
+    for (int i = 0; i < excessWorkload; i++) {
       final String suffix = RandomStringUtils.randomAlphabetic(4);
       final String displayName = String.format("%s.cb-%s", projectName, suffix);
       final CodeBuilderCloud cloud = this;
@@ -366,19 +363,6 @@ public class CodeBuilderCloud extends Cloud {
 
     lastProvisionTime = System.currentTimeMillis();
     return list;
-  }
-
-  /**
-   * Find the number of {@link CodeBuilderAgent} instances still connecting to
-   * Jenkins host.
-   */
-  private long numStillProvisioning() {
-    return jenkins().getNodes().stream()
-      // Get all `CodeBuilderAgent`s as `CodeBuilderAgent`s
-      .filter(CodeBuilderAgent.class::isInstance).map(CodeBuilderAgent.class::cast)
-      // Get all those that haven't succesfully launched yet (those for which 'launching' is 'supported')
-      .filter(a -> a.getLauncher().isLaunchSupported())
-      .count();
   }
 
   /** {@inheritDoc} */
@@ -428,7 +412,7 @@ public class CodeBuilderCloud extends Cloud {
     }
 
     public boolean getDefaultTerminateAgent() {
-    	return DEFAULT_TERMINATE_AGENT;
+      return DEFAULT_TERMINATE_AGENT;
     }
 
     public ListBoxModel doFillCredentialsIdItems() {
